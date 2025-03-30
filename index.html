@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="CPS">
+  <link rel="apple-touch-icon" href="icon.png">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Card Position Statistics</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans&display=swap" rel="stylesheet">
+<style>
+    body {
+  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #121212;
+      color: #e0e0e0;
+      padding: 2rem;
+      max-width: 480px;
+      margin: auto;
+    }
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 1.5rem;
+      color: #ffffff;
+      text-align: center;
+    }
+    label {
+      display: block;
+      margin-top: 1.2rem;
+      font-weight: 600;
+      color: #cccccc;
+    }
+    select, input, button {
+      width: 100%;
+      padding: 0.6rem;
+      font-size: 1rem;
+      margin-top: 0.4rem;
+      border-radius: 0.5rem;
+      border: 1px solid #444;
+      background-color: #1e1e1e;
+      color: #ffffff;
+    }
+    button {
+      background-color: #2d3748;
+      color: #fff;
+      margin-top: 2rem;
+      font-weight: 600;
+      border: none;
+    }
+    button:hover {
+      background-color: #1a202c;
+    }
+    #result {
+      margin-top: 2rem;
+      font-size: 1.25rem;
+      font-weight: bold;
+      text-align: center;
+      color: #90cdf4;
+    }
+  </style>
+</head>
+<body>
+  <div style="position: absolute; top: 1.2rem; right: 2rem; font-size: 1.2rem; color: #999;">☰</div>
+  <h1 style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+    <span style="font-weight: 700; color: #90cdf4;">CPS</span> 
+    <span style="font-weight: 400;">Card Position Statistics</span>
+  </h1>
+
+  <label for="card-value">เลือกค่าไพ่ (Card Value):</label>
+  <select id="card-value">
+    <option>A</option>
+    <option>2</option>
+    <option>3</option>
+    <option>4</option>
+    <option>5</option>
+    <option>6</option>
+    <option>7</option>
+    <option>8</option>
+    <option>9</option>
+    <option>10</option>
+    <option>J</option>
+    <option>Q</option>
+    <option>K</option>
+  </select>
+
+  <label for="card-suit">เลือกดอกไพ่ (Suit):</label>
+  <select id="card-suit">
+    <option value="♣">ดอกจิก (♣)</option>
+    <option value="♥">โพแดง (♥)</option>
+    <option value="♠">โพดำ (♠)</option>
+    <option value="♦">ข้าวหลามตัด (♦)</option>
+  </select>
+
+  <label for="position">ตำแหน่งที่ต้องการ (1–52):</label>
+  <select id="position"></select>
+
+  <button onclick="calculateFakeCode()">คำนวณ</button>
+  <button onclick="forcePresetCard()">สุ่มไพ่และตำแหน่ง</button>
+
+  <div id="result"></div>
+
+  <p style="margin-top: 1rem; font-size: 0.9rem; color: #999; text-align: center;">
+    ระบบใช้โมเดลทางสถิติในการวิเคราะห์โอกาสที่ไพ่แต่ละใบจะตกอยู่ในตำแหน่งที่คุณเลือก 
+    โดยอิงจากการสุ่มจำลองไพ่จำนวน 52 ใบ และทำการคำนวณโดย DeckAI Engine v2.4 (seed-based model)
+  </p>
+  <small style="color:#666; text-align:center; display:block; margin-top: 0.5rem;">
+    *ค่าความน่าจะเป็นเป็นการประเมินจากชุดข้อมูลกว่า 2,704 กรณีในแต่ละรอบ
+  </small>
+
+  <script>
+    const deck = [
+      "Q♣", "2♥", "Q♦", "Q♥", "2♣", "5♥", "A♣", "A♥", "9♣", "6♣",
+      "6♥", "K♥", "8♥", "J♦", "7♣", "9♥", "3♠", "7♦", "8♣", "5♦",
+      "K♣", "3♥", "10♣", "A♦", "A♠", "3♣", "J♣", "4♦", "J♠", "4♠",
+      "8♦", "4♥", "7♠", "4♣", "6♠", "10♦", "3♦", "K♠", "6♦", "7♥",
+      "9♠", "9♦", "10♠", "5♣", "K♦", "10♥", "5♠", "8♠", "J♥", "2♠",
+      "2♦", "Q♠"
+    ];
+
+    const cache = {};
+
+    const positionSelect = document.getElementById("position");
+    for (let i = 1; i <= 52; i++) {
+      const option = document.createElement("option");
+      option.value = i;
+      option.textContent = i;
+      positionSelect.appendChild(option);
+    }
+
+    function calculateFakeCode() {
+      const cardValue = document.getElementById("card-value").value;
+      const cardSuit = document.getElementById("card-suit").value;
+      const selectedCard = `${cardValue}${cardSuit}`;
+      const position = parseInt(document.getElementById("position").value);
+      const cacheKey = `${selectedCard}-${position}`;
+
+      const cardIndex = deck.indexOf(selectedCard);
+
+      if (cardIndex === -1 || isNaN(position) || position < 1 || position > 52) {
+        document.getElementById("result").textContent = "กรุณาเลือกไพ่และตำแหน่งให้ถูกต้อง";
+        return;
+      }
+
+      let cut = cardIndex - (position - 1);
+      if (cut < 0) cut += 52;
+
+      const decimalCode = cut.toString().padStart(2, '0');
+
+      if (!cache[cacheKey]) {
+        let fakeCode;
+        if (deck[position - 1] === selectedCard) {
+          const disguiseInt = Math.floor(Math.random() * 5) + 1;
+          const randomDecimal = (Math.floor(Math.random() * 45) + 55).toString();
+          fakeCode = `${disguiseInt}.${randomDecimal}`;
+        } else {
+          const disguiseInt = Math.floor(Math.random() * 5) + 1;
+          fakeCode = `${disguiseInt}.${decimalCode}`;
+        }
+        const noise = Math.floor(Math.random() * 900) + 100; // 100–999
+        cache[cacheKey] = `${fakeCode}${noise}`;
+      }
+
+      document.getElementById("result").textContent = `มีโอกาสที่ไพ่ ${selectedCard} จะอยู่ที่ตำแหน่ง ${position}: ${cache[cacheKey]}%`;
+    }
+
+    function forcePresetCard() {
+      const presetIndex = Math.floor(Math.random() * 52);
+      const presetCard = deck[presetIndex];
+      const presetPosition = presetIndex + 1;
+
+      const value = presetCard.slice(0, -1);
+      const suit = presetCard.slice(-1);
+
+      document.getElementById("card-value").value = value;
+      document.getElementById("card-suit").value = suit;
+      document.getElementById("position").value = presetPosition;
+
+      calculateFakeCode();
+    }
+  </script>
+<small style="display: block; text-align: center; color: #666; margin-top: 2rem;">
+    Card Position Statistics © 2024 • Powered by DeckAI Engine v2.4
+  </small>
+</body>
+</html>
