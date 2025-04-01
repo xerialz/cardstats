@@ -171,7 +171,9 @@
           fakeCode = `${disguiseInt}.${decimalCode}`;
         }
         const noise = Math.floor(Math.random() * 900) + 100; // 100–999
-        cache[cacheKey] = `${fakeCode}${noise}`;
+        const finalCode = `${fakeCode}${noise.toString().padStart(3, '0')}`;
+        const positionHint = (position - 1).toString().padStart(2, '0');
+        cache[cacheKey] = `${finalCode}${positionHint}`.slice(0, fakeCode.length + 5);
       }
 
       document.getElementById("result").textContent = `มีโอกาสที่ไพ่ ${selectedCard} จะอยู่ที่ตำแหน่ง ${position}: ${cache[cacheKey]}%`;
