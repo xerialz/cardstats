@@ -179,8 +179,20 @@
       document.getElementById("result").textContent = `มีโอกาสที่ไพ่ ${selectedCard} จะอยู่ที่ตำแหน่ง ${position}: ${cache[cacheKey]}%`;
     }
 
+    let usedPresetIndices = [];
+
     function forcePresetCard() {
-      const presetIndex = Math.floor(Math.random() * 52);
+      if (usedPresetIndices.length === deck.length) {
+        usedPresetIndices = [];
+      }
+
+      let presetIndex;
+      do {
+        presetIndex = Math.floor(Math.random() * 52);
+      } while (usedPresetIndices.includes(presetIndex));
+
+      usedPresetIndices.push(presetIndex);
+
       const presetCard = deck[presetIndex];
       const presetPosition = presetIndex + 1;
 
